@@ -2,456 +2,278 @@
 A model for predicting music genres
 
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy import stats
-from scipy.stats import skew, kurtosis
-from scipy.stats import zscore, ttest_ind, f_oneway
-from scipy.stats import chi2_contingency
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA,TruncatedSVD
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn import datasets
-from sklearn.model_selection import cross_val_predict, StratifiedKFold
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import roc_curve, auc, confusion_matrix, roc_auc_score
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import mean_squared_error, precision_score, recall_score, f1_score
-from sklearn.metrics import ConfusionMatrixDisplay
-from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder
-from sklearn.model_selection import cross_val_score, StratifiedKFold
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout
-from tensorflow.keras import regularizers
-from sklearn.utils import shuffle
-df = pd.read_csv('/kaggle/input/30000-spotify-songs/spotify_songs.csv')
-df.head()
-df.tail()
-df.sample()
-df.info()
-df.dtypes
-df.shape
-df.columns
-df.describe().T
-df.isnull().sum()
-df.dropna()
-df.isnull().sum()
-df.isna().any(axis=0)
-df['track_name'].fillna('Unknown', inplace=True)
-df['track_artist'].fillna('Unknown', inplace=True)
-df['track_album_name'].fillna('Unknown', inplace=True)
-df.isnull().sum()
-df.duplicated()
-df[df.duplicated()]
-df.hist(figsize=(10,10))
-sns.boxplot(x='track_popularity', data=df)
-plt.show()
-sns.boxplot(x='danceability', data=df)
-plt.show()
-sns.boxplot(x='energy', data=df)
-plt.show()
-sns.boxplot(x='key', data=df)
-plt.show()
-sns.boxplot(x='loudness', data=df)
-plt.show()
-sns.boxplot(x='mode', data=df)
-plt.show()
-sns.boxplot(x='speechiness', data=df)
-plt.show()
-sns.boxplot(x='instrumentalness', data=df)
-plt.show()
-sns.boxplot(x='liveness', data=df)
-plt.show()
-sns.boxplot(x='valence', data=df)
-plt.show()
-sns.boxplot(x='tempo', data=df)
-plt.show()
-sns.boxplot(x='duration_ms', data=df)
-plt.show()
-df = df[(df['danceability'] >= 0.28) & (df['danceability'] <= 1)]
-sns.boxplot(data=df[['danceability']])
-plt.title('Boxplot for Trimmed data')
-plt.show()
-df = df[(df['energy'] >= 0.21) & (df['energy'] <=1)]
-sns.boxplot(data=df[['energy']])
-plt.title('Boxplot for Trimmed data')
-plt.show()
-df = df[(df['loudness'] >= -12.5) & (df['loudness'] <=0.3)]
-sns.boxplot(data=df[['loudness']])
-plt.title('Boxplot for Trimmed data')
-plt.show()
-df = df[(df['speechiness'] >=0) & (df['speechiness'] <=0.11)]
-sns.boxplot(data=df[['speechiness']])
-plt.title('Boxplot for Trimmed data')
-plt.show()
-df = df[(df['instrumentalness'] <= 0.000019) & (df['instrumentalness'] >= 0.000001)]
-sns.boxplot(data=df[['instrumentalness']])
-plt.title('Boxplot for Trimmed data')
-plt.show()
-df = df[(df['liveness'] >= 0) & (df['liveness'] <= 0.37)]
-sns.boxplot(data=df[['liveness']])
-plt.title('Boxplot for Trimmed data')
-plt.show()
-df = df[(df['tempo'] >= 53) & (df['tempo'] < 176)]
-sns.boxplot(data=df[['tempo']])
-plt.title('Boxplot for Trimmed data')
-plt.show()
-df = df[(df['duration_ms'] >= 120000) & (df['duration_ms'] <= 305000)]
-sns.boxplot(data=df[['duration_ms']])
-plt.title('Boxplot for Trimmed data')
-plt.show()
-df.shape
-'''scatter_columns = ['track_popularity', 'danceability', 'energy', 'key', 'loudness', 'mode','speechiness','acousticness','instrumentalness','liveness','valence','tempo','duration_ms']
-sns.pairplot(df[scatter_columns])
-plt.show'''
-df.playlist_genre.value_counts()
-genre_counts = df['playlist_genre'].value_counts()
-plt.bar(genre_counts.index, genre_counts.values, color=['#7fcce5', '#ff8c42', '#84a59d', '#cc99c9', '#6e5773', '#d1ae9f'])
-plt.xlabel('Music Genre')
-plt.ylabel('Number of Songs')
-plt.title('Music Genre Distribution')
-plt.show()
-plt.pie(genre_counts, labels=genre_counts.index, autopct='%1.1f%%', startangle=90, colors=['#7fcce5', '#ff8c42', '#84a59d', '#cc99c9', '#6e5773', '#d1ae9f'])
-# Adding a title
-plt.title('Music Genre Distribution')
-# Show the plot
-plt.show()
-fig,ax=plt.subplots(figsize = (20,5))
-plt.bar(df.track_artist.value_counts()[:10].index,df.track_artist.value_counts()[:10].values, color=['#7fcce5', '#ff8c42', '#84a59d', '#cc99c9', '#6e5773', '#d1ae9f'])
-plt.xlabel('Artist Name')
-plt.ylabel('Number of Listeners')
-plt.title('Top 10 Most Listened to Artists on Spotify ')
-fig.show()
-# top 10 Artists by popularity
-df.loc[:,['track_name','track_artist','track_popularity']].sort_values('track_popularity',ascending=False).drop_duplicates()[:10]
-numerical_columns = ['track_popularity', 'danceability', 'energy', 'key', 'loudness', 'mode','speechiness','acousticness','instrumentalness','liveness','valence','tempo','duration_ms']
+				30,000 Spotify songs analysis.
 
-covariance_matrix = df[numerical_columns].cov()
+Abstract: -
 
-print("Covariance Matrix:")
-print(covariance_matrix)
-plt.figure(figsize=(20, 15))
-sns.set(style="white")  # Set background style
-sns.heatmap(covariance_matrix, annot=True, cmap="YlOrBr", fmt=".2f",xticklabels=numerical_columns, yticklabels=numerical_columns)
-plt.title("Covariance Matrix Heatmap")
-plt.show()
-correlation_matrix = df[numerical_columns].corr()
-print(correlation_matrix)
-plt.figure(figsize=(10, 8))
-sns.heatmap(correlation_matrix, annot=True, cmap='Blues', fmt=".2f", linewidths=.5)
-plt.title('Correlation Matrix Heatmap')
-plt.show()
-categorical_columns = ['track_name', 'track_artist', 'track_popularity','track_album_name','track_album_release_date','playlist_name','playlist_genre','playlist_subgenre']
-#comparing track_name and track_artist (change to track_popularity and playlist_genre)
-contingency_table = pd.crosstab(df[categorical_columns[0]], df[categorical_columns[1]])
-
-chi2, p, dof, expected = chi2_contingency(contingency_table)
-
-print("Chi-Square Statistics:", chi2)
-print("P-value:", p)
-print("Degrees of Freedom:", dof)
-print("Expected Frequencies:",expected)
-sample_size = 100
-df_sample = df.sample(sample_size)
-population_mean = df["track_popularity"].mean()
-population_std = df["track_popularity"].std()
-sample_mean = df_sample["track_popularity"].mean()
-alpha = 0.05
-
-# z_test
-z_score = (sample_mean - population_mean) / (population_std / np.sqrt(sample_size))
-print("Z-Score :", z_score)
+The dataset 30,000 Spotify Songs encompasses information on 30,000 Spotify songs, serves as a comprehensive resource for exploring and analyzing music data. To enhance the dataset's utility, a rigorous preprocessing pipeline has been employed, encompassing steps such as handling missing values, normalization of numerical features, encoding categorical variables, and potentially extracting relevant features. This preparatory phase ensures the dataset's readiness for subsequent modeling and analysis.
+The exploration phase involves insightful visualizations to unravel inherent patterns and correlations within the dataset. Graphical representations may include distributions of key features, temporal trends, and relationships between various attributes. These visualizations aid in understanding the underlying structure of the music data.
+A primary objective of this study is to predict the genre of each song using diverse machine learning models. The models selected for evaluation include Naive Bayesian, Bayesian Belief Network, Decision Tree (Entropy, and error estimation), LDA, Neural Network, and K-NN with different distance metrics.
+The evaluations of these models are conducted rigorously to ensure a comprehensive understanding of their performance. The assessment metrics include K-fold cross-validation with average accuracy, Confusion Matrix, Accuracy, Error rate, Precision, Recall, F-measure, and ROC (Receiver Operating Characteristic) analysis. K-fold cross-validation ensures robustness in assessing model performance, while the various metrics provide nuanced insights into classification accuracy, error rates, and the effectiveness of each model in differentiating between song genres.
+This study aims to contribute valuable insights into the application of machine learning techniques in the domain of music genre prediction, providing a benchmark for future research and fostering a deeper understanding of the relationships between song attributes and genres.
 
 
-z_critical = stats.norm.ppf(1 - alpha)
-print("Critical Z-Score :", z_critical)
 
 
-if z_score > z_critical:
-    print("Reject H0")
-else:
-    print("Fail to Reject H0")
-anova_result = f_oneway(df['track_popularity'][df['playlist_genre'] == 'pop'],
-                        df['track_popularity'][df['playlist_genre'] == 'latin'],
-                        df['track_popularity'][df['playlist_genre'] == 'r&b'],
-                        df['track_popularity'][df['playlist_genre'] == 'edm'],
-                        df['track_popularity'][df['playlist_genre'] == 'rock'],
-                        df['track_popularity'][df['playlist_genre'] == 'rap']
-                        )
-print("\nANOVA Result")
-print("F-statistic:", anova_result.statistic)
-print("P-value:", anova_result.pvalue)
-# Select features and target variable
-features = df[['track_popularity', 'danceability', 'energy', 'key',
-                  'loudness', 'mode', 'speechiness', 'acousticness', 'instrumentalness',
-                  'liveness', 'valence', 'tempo', 'duration_ms']]
-
-target = df['playlist_genre']
-
-# Splitting the dataset into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
-
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
-# Applying PCA
-pca = PCA(n_components=2)
-X_train_pca = pca.fit_transform(X_train_scaled)
-X_test_pca = pca.transform(X_test_scaled)
-# Applying LDA
-lda = LinearDiscriminantAnalysis(n_components=2)
-X_train_lda = lda.fit_transform(X_train_scaled, y_train)
-X_test_lda = lda.transform(X_test_scaled)
-# Applying SVD
-svd = TruncatedSVD(n_components=2)
-X_train_svd = svd.fit_transform(X_train_scaled)
-X_test_svd = svd.transform(X_test_scaled)
-X_train_pca, X_train_lda, X_train_svd
-X_train_combined = np.hstack((X_train_pca, X_train_lda, X_train_svd))
-X_test_combined = np.hstack((X_test_pca, X_test_lda, X_test_svd))
-
-label_encoder = LabelEncoder()
-y_train_encoded = label_encoder.fit_transform(y_train)
-X_train_combined, y_train_encoded = shuffle(X_train_combined, y_train_encoded, random_state=42)
-# Plotting PCA
-plt.figure(figsize=(12, 4))
-
-plt.subplot(1, 3, 1)
-sns.scatterplot(x=X_train_pca[:, 0], y=X_train_pca[:, 1], hue=y_train, palette='viridis')
-plt.title('PCA')
-
-# Plotting LDA
-plt.subplot(1, 3, 2)
-sns.scatterplot(x=X_train_lda[:, 0], y=X_train_lda[:, 1], hue=y_train, palette='viridis')
-plt.title('LDA')
-
-# Plotting SVD
-plt.subplot(1, 3, 3)
-sns.scatterplot(x=X_train_svd[:, 0], y=X_train_svd[:, 1], hue=y_train, palette='viridis')
-plt.title('SVD')
-
-plt.tight_layout()
-plt.show()
-# Naive Bayes
-nb_model = GaussianNB()
-nb_model.fit(X_train_combined, y_train)
-y_pred_nb = nb_model.predict(X_test_combined)
-pip install pgmpy
-'''from pgmpy.models import BayesianModel
-from pgmpy.estimators import MaximumLikelihoodEstimator
-from pgmpy.inference import VariableElimination
-
-def discretize_and_add_category(df, columns, percentiles, labels):
-    for column in columns:
-        new_category_column = f'{column}_category'
-        df[new_category_column] = pd.cut(df[column], bins=np.percentile(df[column], percentiles), labels=labels)
-    return df
-
-# Assuming you have loaded your dataset into df
-# Define the variables of interest
-audio_features = ['danceability', 'energy', 'tempo']
-target_variable = 'playlist_genre'
-
-# Discretize specified columns and add new category columns
-percentiles_danceability = [0, 33, 66, 100]
-labels_danceability = ['low', 'medium', 'high']
-columns_to_discretize = ['danceability', 'energy', 'tempo']
-
-df = discretize_and_add_category(df, columns_to_discretize, percentiles_danceability, labels_danceability)
-
-# Create a Bayesian Network model
-bbn_model = BayesianModel([(feature, target_variable) for feature in audio_features] + [(f'{col}_category', col) for col in columns_to_discretize])
-
-# Fit the model using Maximum Likelihood Estimation
-data_subset = df[audio_features + [f'{col}_category' for col in columns_to_discretize] + [target_variable]].sample(frac=0.1, random_state=42)
-bbn_model.fit(data_subset, estimator=MaximumLikelihoodEstimator)
-
-# Perform inference using Variable Elimination
-inference = VariableElimination(bbn_model)
-
-# Example: Query the model to predict 'playlist_genre' based on audio features
-query_result = inference.query(variables=[target_variable], evidence={'danceability_category': 'medium', 'energy_category': 'medium', 'tempo_category': 'medium'})
-print(query_result)'''
-# Decision Tree
-dt_model = DecisionTreeClassifier(criterion='entropy',ccp_alpha=0.005,random_state = 42)
-dt_model.fit(X_train_combined, y_train)
-y_pred_dt = dt_model.predict(X_test_combined)
-# LDA
-lda_model = LinearDiscriminantAnalysis()
-lda_model.fit(X_train_combined, y_train)
-y_pred_lda = lda_model.predict(X_test_combined)
-# PCA
-pca_model = PCA(n_components=2)
-X_train_pca_model = pca_model.fit_transform(X_train_combined)
-X_test_pca_model = pca_model.transform(X_test_combined)
-# K-NN (using Euclidean distance)
-#k-value
-knn_model_euclidean = KNeighborsClassifier(n_neighbors=3, metric='euclidean')
-knn_model_euclidean.fit(X_train_combined, y_train)
-y_pred_knn_euclidean = knn_model_euclidean.predict(X_test_combined)
-# K-NN (using Manhattan distance)
-knn_model_manhattan = KNeighborsClassifier(n_neighbors=3, metric='manhattan')
-knn_model_manhattan.fit(X_train_combined, y_train)
-y_pred_knn_manhattan = knn_model_manhattan.predict(X_test_combined)
-# K-NN (using Chebyshev distance)
-knn_model_chebyshev = KNeighborsClassifier(n_neighbors=3, metric='chebyshev')
-knn_model_chebyshev.fit(X_train_combined, y_train)
-y_pred_knn_chebyshev = knn_model_manhattan.predict(X_test_combined)
-# Neural Network
-model = Sequential()
-model.add(Dense(128, input_dim=X_train_combined.shape[1], activation='relu', kernel_regularizer=regularizers.l2(0.001)))
-model.add(Dropout(0.5))
-model.add(Dense(64, activation='relu'))
-model.add(Dense(32, activation='relu'))
-model.add(Dense(len(label_encoder.classes_), activation='softmax'))
 
 
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+Introduction: -
+
+In the contemporary era of digitized music consumption, vast repositories of song data provide an unprecedented opportunity for exploration and analysis. The dataset encapsulates a trove of information pertaining to 30,000 Spotify songs, offering a comprehensive view into the intricate world of music. This dataset not only serves as a testament to the diversity of musical expressions but also acts as a fertile ground for the application of machine learning techniques, with the goal of predicting song genres.
+The preprocessing of the dataset is a pivotal initial step, ensuring the data's cleanliness, consistency, and suitability for advanced analyses. Steps such as handling missing values, normalizing numerical features, and encoding categorical variables form an integral part of this process, laying the foundation for robust model development. Once the data is refined, a journey of exploration begins through insightful visualizations that unravel hidden patterns and relationships within the music data. This phase provides a contextual understanding of the dataset, setting the stage for the subsequent predictive modeling.
+At the core of this study lies the ambitious endeavor to predict the genre of each song. Adopting a diverse set of Machine Learning models, including Naive Bayesian, Bayesian Belief Network, Decision Tree (Entropy, and error estimation), LDA, Neural Network, and K-NN with different distance metrics, this study aims to explore the efficacy of these models in discerning the intricate nuances of musical genres. Each model brings its unique strengths and characteristics, offering a diverse landscape for evaluation.
+The evaluations are not merely limited to accuracy metrics but delve deeper into the nuances of model performance. K-fold cross-validation with average accuracy ensures robustness, providing a comprehensive assessment of each model's generalizability. Metrics such as Confusion Matrix, Accuracy, Error rate, Precision, Recall, F-measure, and ROC analysis offer a nuanced understanding of the models' classification abilities, shedding light on their strengths and potential areas for improvement.
+This research, situated at the intersection of data science and music analytics, aspires to contribute valuable insights to both fields. Beyond the technicalities of predictive modeling, the study aims to uncover broader trends within the dataset, fostering a deeper appreciation for the intricate interplay between musical attributes and genres. Ultimately, this exploration stands as a testament to the boundless possibilities that emerge when the world of music converges with the power of data-driven insights.
 
 
-history = model.fit(X_train_combined, y_train_encoded, epochs=10, batch_size=32, validation_split=0.2)
-def evaluate_model_with_overfitting_check(model, X_train, y_train, X_test, y_test):
-    # K-fold cross-validation
-    kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    cv_results = cross_val_score(model, X_test, y_test, cv=kfold, scoring='accuracy')
-    print(f'K-fold Cross-Validation Accuracy: {cv_results.mean()}')
-
-    # Confusion Matrix
-    y_pred = model.predict(X_test)
-    cm = confusion_matrix(y_test, y_pred)
-    print(f'Confusion Matrix:\n{cm}')
-
-    # Accuracy
-    accuracy = accuracy_score(y_test, y_pred)
-    print(f'Accuracy: {accuracy}')
-
-    # Error rate
-    error_rate = 1 - accuracy
-    print(f'Error Rate: {error_rate}')
-
-    # Precision
-    precision = precision_score(y_test, y_pred, average='weighted')
-    print(f'Precision: {precision}')
-
-    # Recall
-    recall = recall_score(y_test, y_pred, average='weighted')
-    print(f'Recall: {recall}')
-
-    # F-measure
-    f_measure = f1_score(y_test, y_pred, average='weighted')
-    print(f'F-measure: {f_measure}')
-
-    # ROC-AUC (if applicable)
-    if hasattr(model, 'predict_proba'):
-        y_prob = model.predict_proba(X_test)
-        roc_auc = roc_auc_score(y_test, y_prob, multi_class='ovr')
-        print(f'ROC-AUC: {roc_auc}')
-
-    # Train set accuracy
-    train_accuracy = accuracy_score(y_train, model.predict(X_train))
-
-    # Determine if the model is overfitting or underfitting
-    if train_accuracy > accuracy + 0.1:
-        print("Model might be overfitting.")
-    elif train_accuracy + 0.1 < accuracy:
-        print("Model might be underfitting.")
-    else:
-        print("Model is likely fitting well.")
-def plot_roc(model, X_test, y_test):
-    if hasattr(model, 'predict_proba'):
-        disp = plot_roc_curve(model, X_test, y_test)
-        plt.title('Receiver Operating Characteristic (ROC) Curve')
-        plt.show()
-    else:
-        print("ROC curve is not applicable for models that do not have 'predict_proba' method.")
-
-# Example usage:
-print("Naive Bayes:")
-evaluate_model_with_overfitting_check(nb_model, X_train_combined, y_train, X_test_combined, y_test)
-plot_roc(nb_model, X_test_combined, y_test)
-
-print("\nDecision Tree:")
-evaluate_model_with_overfitting_check(dt_model, X_train_combined, y_train, X_test_combined, y_test)
-plot_roc(dt_model, X_test_combined, y_test)
-
-print("\nLDA:")
-evaluate_model_with_overfitting_check(lda_model, X_train_combined, y_train, X_test_combined, y_test)
-plot_roc(lda_model, X_test_combined, y_test)
-
-print("\nK-NN (Euclidean):")
-evaluate_model_with_overfitting_check(knn_model_euclidean, X_train_combined, y_train, X_test_combined, y_test)
-plot_roc(knn_model_euclidean, X_test_combined, y_test)
 
 
-print("\nK-NN (Manhattan):")
-evaluate_model_with_overfitting_check(knn_model_manhattan, X_train_combined, y_train, X_test_combined, y_test)
-plot_roc(knn_model_manhattan, X_test_combined, y_test)
 
 
-print("\nK-NN (Chebyshev):")
-evaluate_model_with_overfitting_check(knn_model_chebyshev, X_train_combined, y_train, X_test_combined, y_test)
-plot_roc(knn_model_chebyshev, X_test_combined, y_test)
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 
-# Assuming your dataset is stored in a DataFrame named 'df'
-# Drop rows with missing values for simplicity
-df_cleaned = df.dropna()
+Related Work: -
+Title	Authors	Reference	Year	Methods	Results
+The Deep Content-Based Music Recommendation	A. van den Oord,
+S. Dieleman,
+B. Schrauwen	arXiv:1303.1788	2013	Deep Learning	Introduced a deep content-based recommendation system for music
+Automatic Musical Genre Classification of Audio Signals	George Tzanetakis, Perry Cook	IEEE Transactions on Speech and Audio Processing	2002	Audio signal processing, statistical analysis	Presented a method for automatically classifying music into genres based on audio signals.
+Music Emotion Recognition: A State-of-the-Art Review	Yi-Hsuan Yang, Homer H. Chen	IEEE Transactions on Audio, Speech, and Language Processing	2013	Deep Learning	Provided a comprehensive review of techniques for music emotion recognition.
+Content-Based Music Genre Classification Using Deep Learning	Minz Won, Jangyeon Park	International Society for Music Information Retrieval Conference	2018	Deep Learning	Applied deep learning for content-based music genre classification
+A Survey on Music Emotion Recognition: From Signals to Lyrics	Yu-Han Chen, Liang-Chih Yu, and Yi-Hsuan Yang	Journal of King Saud University - Computer and Information Sciences	2017	Survey of existing techniques	Summarized the state of the art in music emotion recognition
+Music Genre Classification: A Class in Review, Techniques and Challenges	Alok Ranjan Pal, Swagat Kumar, Sanjoy Kumar Saha	Expert Systems with Applications	2018	Review of techniques and challenges	Explored various techniques and challenges in music genre classification.
+A Survey of Audio-Based Music Classification and Annotation	Meinard Müller	IEEE Transactions on Multimedia	2007	Survey of audio-based classification techniques	Reviewed existing methods for audio-based music classification and annotation.
+Learning Hierarchical Representations for Music Genre Classification Using Convolutional Neural Networks	Keunwoo Choi, George Fazekas, Mark Sandler	arXiv:1603.00930
+	2016	Convolutional Neural Networks (CNN)	Applied CNNs to learn hierarchical representations for music genre classification.
 
-# Encode the target variable 'playlist_genre'
-label_encoder = LabelEncoder()
-df_cleaned['playlist_genre_encoded'] = label_encoder.fit_transform(df_cleaned['playlist_genre'])
+Convolutional Recurrent Neural Networks for Music Classification	Jongpil Lee, Jiyoung Park, Juhan Nam	arXiv:1609.04243
+	2016	Convolutional Recurrent Neural Networks (CRNN)	Utilized CRNNs for music classification, combining convolutional and recurrent layers.
+A Comprehensive Review on Audio-based Music Classification and Annotation	S. D. S. Seneviratne, T. N. G. I. Fernando, S. Kodagoda	Journal of Computer Science and Technology	2014	Review of audio-based classification techniques	Provided a comprehensive review of audio-based music classification and annotation techniques.
 
-# Select only numeric columns
-numeric_columns = df_cleaned.select_dtypes(include=[np.number]).columns
-X = df_cleaned[numeric_columns].drop(columns=['playlist_genre_encoded'])  # Exclude the target variable
 
-y = df_cleaned['playlist_genre_encoded']
 
-# Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Train a Random Forest classifier
-rf_classifier = RandomForestClassifier(random_state=42)
-rf_classifier.fit(X_train, y_train)
+Methodology: -
 
-# Get feature importances
-feature_importances = pd.Series(rf_classifier.feature_importances_, index=X.columns)
+Data Collection:
+Collect the dataset containing Spotify songs information, including audio features and genre labels.
+Data Preprocessing:
+Handle missing values by either dropping or imputing them.
+Visualize data through histograms, boxplots, and pair plots to understand feature distributions and relationships.
+Trim outliers in key features to improve model robustness.
+Discretize numeric features like danceability, energy, and tempo.
+Encode categorical variables and label-encode the target variable, 'playlist_genre'.
+Exploratory Data Analysis (EDA):
+Compute basic statistics (Min, Max, Mean, Variance, Standard Deviation, Skewness, Kurtosis) for numeric features.
+Visualize genre distribution using bar charts and pie charts.
+Analyze the correlation and covariance between audio features.
+Conduct a chi-square test to assess independence between categorical variables.
+Feature Reduction:
+Implement Linear Discriminant Analysis (LDA), Principal Component Analysis (PCA), and Singular Value Decomposition (SVD) to reduce feature dimensions.
+Model Building:
+Train various models, including Decision Tree, Naive Bayes, LDA, K-NN, Neural Network, and Random Forest, to predict playlist genres.
+Model Evaluation:
+Split the dataset into 80% training and 20% testing sets.
+Apply K-fold cross-validation and calculate average accuracy for each fold.
+Generate confusion matrices for each classifier, evaluating accuracy, error rate, precision, recall, F-measure, and ROC-AUC.
+Check for potential overfitting or underfitting by comparing training and testing set accuracies.
+Proposed Model
 
-# Sort features by importance in descending order
-sorted_features = feature_importances.sort_values(ascending=False)
+Data Preprocessing: -
+Handling Missing Values.
+Rows with missing values were dropped for simplicity. (only 5 rows).
+Filling the unknown gaps in the dataset.
+Data Trimming: -
+Outliers were identified and removed in specific numerical columns (e.g., danceability, energy, loudness) using boxplot-based trimming.
+Exploratory Data Analysis (EDA): -
+Descriptive Statistics:
+Basic statistical measures were calculated for numeric columns (Mean, Mode, Variance, Standard deviation, etc.)
+Data Visualization: -
+Histograms, boxplots, and pair plots were used to visualize the distribution, central tendency, and relationships between audio features.
+Genre Distribution: 
+Bar and pie charts were utilized to display the distribution of music genres in the dataset.
+Top Artists and Tracks: 
+Bar charts were created to showcase the most listened-to artists and tracks.
+Correlation and Covariance Analysis: -
+Heatmaps were generated to visualize the correlation and covariance matrices of numeric features.
+Chi-Square Test: 
+A chi-square test was conducted to analyze the independence between two categorical variables (e.g., track name and artist).
 
-# Display the top features
-print(sorted_features.head(10))
-from sklearn.model_selection import cross_val_score, KFold
-#K-fold cross validation
-kfold = KFold(n_splits=5, shuffle=True, random_state=42)
 
-# Perform cross-validation and get accuracy scores
-cv_scores = cross_val_score(dt_model, features, target, cv=kfold, scoring='accuracy')
 
-# Calculate and print the average accuracy
-average_accuracy = cv_scores.mean()
-print("Average Accuracy:", average_accuracy)
-predictions = cross_val_predict(dt_model, features, target, cv=kfold)
 
-class_labels = target.unique()
 
-# Calculate and display the confusion matrix
-conf_matrix = confusion_matrix(target, predictions, labels=class_labels)
-plt.figure(figsize=(8, 6))
-sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=class_labels, yticklabels=class_labels)
-plt.xlabel('Predicted Label')
-plt.ylabel('True Label')
-plt.title('Confusion Matrix')
-plt.show()
+Feature Engineering: -
+Discretization:
+Numeric features like danceability, energy, and tempo were discretized into categories (low, medium, high).
+Label Encoding:
+The target variable, playlist_genre, was label-encoded for model compatibility.
+Model Building: -
+Bayesian Network (BN):
+A Bayesian Network model was created using the pgmpy library to represent probabilistic relationships between audio features and playlist genres.
+Supervised Learning Models:
+Decision Tree, Naive Bayes, LDA, K-NN, and Neural Network models were trained on the dataset to predict playlist genres.
+Model Evaluation: -
+K-Fold Cross-Validation:
+K-fold cross-validation was applied to evaluate model performance and ensure generalization.
+Confusion Matrix:
+Confusion matrices were generated to analyze the classification results.
+Additional Metrics:
+Accuracy, error rate, precision, recall, F-measure, and ROC-AUC (if applicable) were calculated to provide a comprehensive evaluation.
+Overfitting Check:
+A mechanism to detect potential overfitting or underfitting was implemented by comparing training set accuracy with testing set accuracy.
+ 
+
+Results and Discussion: -
+The dataset consists of columns describing songs by its danceability, energy etc.
+The goal here is to focus on our target column the ‘playlist_genre’ and predict all the songs proper genres.
+Data pre-processing and visualization:
+Now the results of the preprocessing, the dataset contained MASSIVE amounts of outliers, we had to properly manage them for example the danceability column
+
+ 
+
+We managed to remove those outliers.
+
+ 
+
+For other columns we did the same idea by removing the outliers and prepare to start our analysis
+
+First, we visualize our data by means of plots.
+ 
+This is an example of the pair plots.
+ 
+The different distributions of the music genres.
+ 
+A more in-depth view using the pie chart.
+ 
+The topmost listened to artists in the dataset (According to 2000-2020)
+ 
+The most popular songs and their artists.
+
+The Data Analysis (Statistical Measures): -
+Covariance Matrix: -
+ 
+Correlation Matrix: -
+ 
+
+
+ 
+Covariance Matrix Heatmap: -
+ 
+Correlation Matrix Heatmap: -
+
+ 
+Chi Square Test results
+ 
+Z-Test Results
+ 
+ANOVA results
+
+
+
+
+
+
+
+
+
+Comparing my results to a previous model implementation: -
+ 
+My model’s result.
+ 
+The referenced model’s result.
+As we can see my model looks a lot cleaner due to more data processing, better classification as shown in the LDA, and similar results in the PCA and SVD.
+
+
+
+
+ 
+The results of the Basyan Network show that there isn’t a very accurate way to determine the genre based on the used parameters (more parameters take more memory than the interpreter handles).
+
+
+
+
+
+
+
+
+
+
+
+
+The Neural Network Model evaluations
+ 
+My model’s results.
+ 
+Referenced model’s results.
+The models’ results are very similar. However, if in increased the number of epochs, my model’s accuracy with drastically keep increasing as we can see from the accuracy and loss values.
+
+
+
+
+
+
+
+The results of the model implementations: -
+ 
+
+
+ 
+
+The average accuracy: -
+ 
+
+
+
+The predicted confusion matrix: -
+ 
+
+Conclusion and Future Work: -
+
+In conclusion, the proposed methodology aimed to leverage audio features of Spotify songs to predict playlist genres. Overall, the accuracy is very low. However, compared to the reference model’s accuracy it’s a significant increase of around 7% higher.Which concludes the study of our project.
+
+Enhanced Feature Engineering:
+Explore additional feature engineering techniques for a more nuanced representation of audio features.
+Experiment with feature scaling methods and normalization.
+Advanced Model Architectures:
+Investigate the use of more sophisticated neural network architectures, such as deep learning models, to capture intricate patterns in the data.
+Hyperparameter Tuning:
+Conduct a thorough hyperparameter tuning process to optimize the performance of selected models further.
+Ensemble Methods:
+Experiment with ensemble methods to combine predictions from multiple models, potentially boosting overall performance.
+Incorporating External Data:
+Integrate external datasets or information that might enhance the predictive power of the model.
+User Feedback Integration:
+Consider incorporating user feedback and engagement metrics to enhance the model's ability to recommend songs based on user preferences.
+Real-time Prediction:
+Explore the feasibility of implementing a real-time prediction system for dynamically updating playlist recommendations.
+Interpretability and Explain ability:
+Enhance model interpretability and explain ability, making it more accessible and transparent for end-users.
+
+
+
+
+
+
+
+
+
+References: -
+Van den Oord, A., Dieleman, S., & Schrauwen, B. (2013). Deep Content-Based Music Recommendation. [arXiv:1303.1788]
+
+Tzanetakis, G., & Cook, P. (2002). Automatic Musical Genre Classification of Audio Signals. IEEE Transactions on Speech and Audio Processing.
+
+Yang, Y.-H., & Chen, H. H. (2013). Music Emotion Recognition: A State of the Art Review. IEEE Transactions on Audio, Speech, and Language Processing.
+
+Won, M., & Park, J. (2018). Content-Based Music Genre Classification Using Deep Learning. International Society for Music Information Retrieval Conference.
+
+Chen, Y.-H., Yu, L.-C., & Yang, Y.-H. (2017). A Survey on Music Emotion Recognition: From Signals to Lyrics. Journal of King Saud University - Computer and Information Sciences.
+
+Pal, A. R., Kumar, S. K., & Saha, S. K. (2018). Music Genre Classification: A Class in Review, Techniques and Challenges. Expert Systems with Applications.
+
+Müller, M. (2007). A Survey of Audio-Based Music Classification and Annotation. IEEE Transactions on Multimedia.
+
+Choi, K., Fazekas, G., & Sandler, M. (2016). Learning Hierarchical Representations for Music Genre Classification Using Convolutional Neural Networks. [arXiv:1603.00930]
+
+Lee, J., Park, J., & Nam, J. (2016). Convolutional Recurrent Neural Networks for Music Classification. [arXiv:1609.04243]
+
+Seneviratne, S. D. S., Fernando, T. N. G. I., & Kodagoda, S. (2014). A Comprehensive Review on Audio-based Music Classification and Annotation. Journal of Computer Science and Technology.
